@@ -1,5 +1,6 @@
 package study.querydsl;
 
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,17 +9,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.entities.Member;
+import study.querydsl.entities.QMember;
 import study.querydsl.entities.Team;
+
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static study.querydsl.entities.QMember.member;
 
 @SpringBootTest
 @Transactional
 class QueryDslBasicTest {
     @Autowired
     EntityManager em;
+    JPAQueryFactory queryFactory;
+
 
     @BeforeEach
     public void before(){
+        queryFactory = new JPAQueryFactory(em);
         Team teamA = new Team("TeamA");
         Team teamB = new Team("TeamB");
 
@@ -48,6 +57,22 @@ class QueryDslBasicTest {
     @Test
     public void startQuerydsl(){
         JPAQueryFactory queryFactory = new JPAQueryFactory(em);
-
+    }
+    
+    @Test
+    public void sqlFunctrion() throws Exception{
+        //given
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate(
+                        "function('replace',{0},{1},{2}"
+                        ,member.username, "member", "m"))
+                .from(member)
+                .fetch();
+        for (String str: result) {
+            System.out.println(str);
+        }
+        //when
+        
+        //then
     }
 }
