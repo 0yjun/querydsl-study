@@ -64,13 +64,14 @@ class QueryDslBasicTest {
         //given
         List<String> result = queryFactory
                 .select(Expressions.stringTemplate(
-                        "function('replace',{0},{1},{2}"
-                        ,member.username, "member", "m"))
+                        "function('replace',{0},{1},{2})"
+                        ,member.username, "member", "M"))
                 .from(member)
                 .fetch();
         for (String str: result) {
             System.out.println(str);
         }
+        assertThat(result.size()).isEqualTo(1);
         //when
         
         //then
