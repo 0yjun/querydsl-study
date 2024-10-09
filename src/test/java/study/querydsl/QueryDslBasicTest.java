@@ -154,6 +154,25 @@ class QueryDslBasicTest {
                                 .fetch();
         Tuple tuple = result.get(0);
         assertThat(tuple.get(member.count())).isEqualTo(4);
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+    }
+
+    @Test
+    public void sqlFunctrion() throws Exception{
+        //given
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate(
+                        "function('replace',{0},{1},{2})"
+                        ,member.username, "member", "M"))
+                .from(member)
+                .fetch();
+        for (String str: result) {
+            System.out.println(str);
+        }
+        assertThat(result.size()).isEqualTo(1);
+        //when
+
+        //then
     }
     @Test
     public void join() throws Exception {
