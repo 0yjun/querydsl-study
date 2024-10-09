@@ -1,8 +1,13 @@
 package study.querydsl;
 
+import com.mysema.commons.lang.Assert;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -18,15 +23,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
-import study.querydsl.entities.Member;
-import study.querydsl.entities.QMember;
-import study.querydsl.entities.QTeam;
-import study.querydsl.entities.Team;
+import study.querydsl.dto.QMemberDto;
+import study.querydsl.dto.QMemberTeamDto;
+import study.querydsl.dto.UserDto;
+import study.querydsl.entities.*;
+import study.querydsl.repository.MemberJpaRepository;
 
 import java.util.List;
 
+import static com.jayway.jsonpath.internal.Utils.isEmpty;
 import static com.querydsl.jpa.JPAExpressions.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.util.StringUtils.hasText;
 import static study.querydsl.entities.QMember.*;
 import static study.querydsl.entities.QTeam.*;
 
@@ -37,6 +45,9 @@ class QueryDslBasicTest {
     EntityManager em;
 
     JPAQueryFactory queryFactory;
+
+    @Autowired
+    MemberJpaRepository memberJpaRepository;
 
     @BeforeEach
     public void before(){
@@ -361,4 +372,129 @@ assertThat(result).extracting("age").isEqualTo(40);
 
        //then
    }
+
+    @Test
+    public void findDtoByConstructor() throws Exception {
+        //given
+        List<MemberDto> result = queryFactory
+                .select(Projections.constructor(MemberDto.class
+                        ,member.username
+                        ,member.age))
+                .from(member)
+                .fetch();
+        for (MemberDto memberDto : result){
+            System.out.println(memberDto.toString());
+        }
+        //when
+
+        //then
+    }
+
+    @Test
+    public void findUserDto() throws Exception {
+        //given
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> result = queryFactory
+                .select(Projections.constructor(UserDto.class
+                        ,member.username.as("name")
+                        , ExpressionUtils.as(
+                                JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub)
+                                , "age")
+                ))
+                .from(member)
+                .fetch();
+        for (UserDto memberDto : result){
+            System.out.println(memberDto.toString());
+        }
+        //when
+
+        //then
+    }
+
+    @Test
+    public void findDtoByQueryProjection() throws Exception {
+        //given
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username,member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result){
+            System.out.println(memberDto.toString());
+        }
+        //when
+
+        //then
+    }
+
+    @Test
+    public void dynamicQuery_BooleanBuilder() throws Exception {
+        //given
+        String usernameParam = "member1";
+        Integer ageParam = null;
+        List<Member> result = searchMember2(usernameParam,ageParam);
+        assertThat(result.size()).isEqualTo(1);
+        //when
+
+        //then
+    }
+
+    private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder();
+        if(usernameCond!=null){
+            builder.and(member.username.eq(usernameCond));
+        }
+
+        if(ageCond!=null){
+            builder.and(member.age.eq(ageCond));
+        }
+
+        return queryFactory
+                .select(member)
+                .from(member)
+                .where(builder)
+                .fetch();
+    }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return queryFactory
+                .select(member)
+                .from(member)
+                //.where(usernameEq(usernameCond), ageEq(ageCond))
+                .fetch();
+    }
+
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+    
+
+    private BooleanExpression allEq(String usernameCond, Integer ageCond){
+        return usernameEq2(usernameCond).and(ageEq(ageCond));
+    }
+
+    @Test
+    public void sqlFunction() throws Exception {
+        //given
+
+        //when
+
+        //then
+    }
+    private BooleanExpression usernameEq2(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+
+    @Test
+    public void jpaRepoTest (){
+        MemberSearchCondition condition = new MemberSearchCondition();
+        condition.setAgeGoe(20);
+        condition.setAgeLoe(40);
+        List<MemberTeamDto> result = memberJpaRepository.search(condition);
+        for (MemberTeamDto dto : result){
+            System.out.println(dto.toString());
+        }
+    }
 }
